@@ -19,7 +19,14 @@ class _SignUpFormState extends State<SignUpForm> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passController = TextEditingController();
-  bool obsecurePass = true;
+  bool obscurePass = true;
+
+  // Regular expression for email validation
+  RegExp emailRegex = RegExp(r'^[\w-]+(\.[\w-]+)*@[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*(\.[a-zA-Z]{2,})$');
+
+  // Regular expression for password validation
+  RegExp passwordRegex = RegExp(r'^(?=.*?[A-Za-z])(?=.*?[0-9]).{8,}$');
+
   @override
   Widget build(BuildContext context) {
     return Form(
@@ -38,6 +45,12 @@ class _SignUpFormState extends State<SignUpForm> {
               prefixIcon: Icon(Icons.person_outlined),
               prefixIconColor: Config.primaryColor,
             ),
+            validator: (value) {
+              if (value!.isEmpty) {
+                return 'Please enter your username';
+              }
+              return null;
+            },
           ),
           Config.spaceSmall,
           TextFormField(
@@ -51,34 +64,54 @@ class _SignUpFormState extends State<SignUpForm> {
               prefixIcon: Icon(Icons.email_outlined),
               prefixIconColor: Config.primaryColor,
             ),
+            validator: (value) {
+              if (value!.isEmpty) {
+                return 'Please enter your email';
+              }
+              if (!emailRegex.hasMatch(value)) {
+                return 'Please enter a valid email address';
+              }
+              return null;
+            },
           ),
           Config.spaceSmall,
           TextFormField(
             controller: _passController,
             keyboardType: TextInputType.visiblePassword,
             cursorColor: Config.primaryColor,
-            obscureText: obsecurePass,
+            obscureText: obscurePass,
             decoration: InputDecoration(
-                hintText: 'Password',
-                labelText: 'Password',
-                alignLabelWithHint: true,
-                prefixIcon: const Icon(Icons.lock_outline),
-                prefixIconColor: Config.primaryColor,
-                suffixIcon: IconButton(
-                    onPressed: () {
-                      setState(() {
-                        obsecurePass = !obsecurePass;
-                      });
-                    },
-                    icon: obsecurePass
-                        ? const Icon(
-                            Icons.visibility_off_outlined,
-                            color: Colors.black38,
-                          )
-                        : const Icon(
-                            Icons.visibility_outlined,
-                            color: Config.primaryColor,
-                          ))),
+              hintText: 'Password',
+              labelText: 'Password',
+              alignLabelWithHint: true,
+              prefixIcon: const Icon(Icons.lock_outline),
+              prefixIconColor: Config.primaryColor,
+              suffixIcon: IconButton(
+                onPressed: () {
+                  setState(() {
+                    obscurePass = !obscurePass;
+                  });
+                },
+                icon: obscurePass
+                    ? const Icon(
+                        Icons.visibility_off_outlined,
+                        color: Colors.black38,
+                      )
+                    : const Icon(
+                        Icons.visibility_outlined,
+                        color: Config.primaryColor,
+                      ),
+              ),
+            ),
+            validator: (value) {
+              if (value!.isEmpty) {
+                return 'Please enter your password';
+              }
+              if (!passwordRegex.hasMatch(value)) {
+                return 'Password must be at least 8 characters long and contain at least one letter and one number';
+              }
+              return null;
+            },
           ),
           Config.spaceSmall,
           Consumer<AuthModel>(
@@ -87,33 +120,38 @@ class _SignUpFormState extends State<SignUpForm> {
                 width: double.infinity,
                 title: 'Sign Up',
                 onPressed: () async {
-                  final userRegistration = await DioProvider().registerUser(
+                  if (_formKey.currentState!.validate()) {
+                    // Username, email, and password validation passed, proceed with sign up
+
+                    final userRegistration = await DioProvider().registerUser(
                       _nameController.text,
                       _emailController.text,
-                      _passController.text);
+                      _passController.text,
+                    );
 
-                  //if register success, proceed to login
-                  if (userRegistration) {
-                    final token = await DioProvider()
-                        .getToken(_emailController.text, _passController.text);
+                    // If registration is successful, proceed with login
+                    if (userRegistration) {
+                      final token = await DioProvider().getToken(
+                        _emailController.text,
+                        _passController.text,
+                      );
 
-                    if (token) {
-                      auth.loginSuccess({}, {}); //update login status
-                      //rediret to main page
-                      MyApp.navigatorKey.currentState!.pushNamed('main');
+                      if (token) {
+                        auth.loginSuccess({}, {}); // Update login status
+                        // Redirect to main page
+                        MyApp.navigatorKey.currentState!.pushNamed('main');
+                      }
+                    } else {
+                      print('Registration not successful');
                     }
-                  } else {
-                    print('register not successful');
                   }
                 },
                 disable: false,
               );
             },
-          )
+          ),
         ],
       ),
     );
   }
 }
-
-//now, let's get all doctor details and display on Mobile screen

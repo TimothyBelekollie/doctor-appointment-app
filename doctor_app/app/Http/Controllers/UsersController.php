@@ -88,7 +88,7 @@ class UsersController extends Controller
         //validate incoming inputs
         $request->validate([
             'name'=>'required|string',
-            'email'=>'required|email',
+            'email'=>'required|email|unique:users,email,',
             'password'=>'required',
         ]);
 
